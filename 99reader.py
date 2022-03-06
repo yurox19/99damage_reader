@@ -1,6 +1,5 @@
 from enum import Enum
 from io import StringIO
-from operator import contains
 from bs4 import BeautifulSoup
 import requests
 import json
