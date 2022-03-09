@@ -13,10 +13,6 @@ teams		= []
 players		= []
 pick_ban 	= []
 
-arg_csv		= False
-arg_team	= False
-arg_match	= False
-
 parser		= argparse.ArgumentParser(description="simple python tool to gather informations about 99damage teams or matches")
 url_group	= parser.add_mutually_exclusive_group(required=True)
 print_group	= parser.add_mutually_exclusive_group()
