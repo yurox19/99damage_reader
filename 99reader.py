@@ -98,6 +98,8 @@ def findPlayer(id_steam):
 			return idx
 
 def steamid_to_64bit(steamid):
+	if(steamid.split("_")[0] != "steam"):
+		return 00000000000000000
 	steam64id = 76561197960265728
 	id_split = steamid.split(":")
 	steam64id += int(id_split[2]) * 2
