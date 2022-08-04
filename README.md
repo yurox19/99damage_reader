@@ -45,7 +45,9 @@ this script gets information about 99damage teams/matches
 ## Version History
 
 * 0.1
-    * Initial Release
+	* Initial Release
+* 0.2
+	* Updated "99damage.de" to "liga.esl-meisterschaft.de"
 
 ## License
 

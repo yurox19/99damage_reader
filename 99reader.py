@@ -108,15 +108,15 @@ def steamid_to_64bit(steamid):
 	return steam64id
 
 def get99Response():
-	if "99damage" not in url_99 and "teams" not in url_99:
-		if "99damage" not in url_99 and "matches" not in url_99:
+	if "esl-meisterschaft" not in url_99 and "teams" not in url_99:
+		if "esl-meisterschaft" not in url_99 and "matches" not in url_99:
 			print("invalid url")
 			exit()
 	else:
 		if args.team:
 			result_99 = requests.get(url_99)
 		elif args.match:
-			result_99 = requests.post("https://liga.99damage.de/ajax/leagues_match", headers = header_99, params =
+			result_99 = requests.post("https://liga.esl-meisterschaft.de/ajax/leagues_match", headers = header_99, params =
 			{
 				"id":			url_99.split("/")[5].split("-")[0],
 				"action":		"init",
