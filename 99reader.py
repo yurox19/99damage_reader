@@ -8,10 +8,12 @@ import argparse
 
 url_ff		= "https://faceitfinder.com/stats/"
 url_vl		= "https://vaclist.net/api/account?q="
+url_faceit	= "https://www.faceit.com/en/players/"
 url_99		= ""
 teams		= []
 players		= []
 pick_ban 	= []
+live		= False
 
 parser		= argparse.ArgumentParser(description="simple python tool to gather informations about 99damage teams or matches")
 url_group	= parser.add_mutually_exclusive_group(required=True)
@@ -67,7 +69,7 @@ class Maps(Enum):
 	de_ancient		= 454
 
 class Player:
-	def __init__(self, name_99, id_steam, name_steam = None, vac_ban = None, game_ban = None, faceit_elo = None, faceit_kd = None, faceit_rating = None, faceit_matches = None):
+	def __init__(self, name_99, id_steam, name_steam = None, vac_ban = None, game_ban = None, faceit_elo = None, faceit_kd = None, faceit_rating = None, faceit_matches = None, faceit_link = None):
 		self.name_99			= name_99
 		self.id_steam			= id_steam
 		self.name_steam			= name_steam
@@ -77,6 +79,7 @@ class Player:
 		self.faceit_kd			= faceit_kd
 		self.faceit_rating		= faceit_rating
 		self.faceit_matches		= faceit_matches
+		self.faceit_link		= faceit_link
 
 class PickBan:
 	def __init__(self, team, action, map):
@@ -134,6 +137,7 @@ def getTeamInfo():
 		getBanInfo(item.find_all("span")[0].string)
 
 def getMatchInfo():
+	global live
 	team_response = json.loads(get99Response())
 	for team in team_response["lineups"].values():
 		for user in team:
@@ -141,23 +145,32 @@ def getMatchInfo():
 			getFaceitInfo("".join(user["gameaccounts"]))
 			getBanInfo("".join(user["gameaccounts"]))
 	html_match = BeautifulSoup(requests.get(url_99).text, "html.parser")
-	scores = html_match.find_all("div", "content-match-head content-league-match-head")[0].find_all("div", "txt-info")[0].string
-	map1 = scores.split("/")[0]
-	map2 = scores.split("/")[1]
 
-	teams.append(Team(team_response["draft_opp1"], team_response["score_1"], map1.split(":")[0], map2.split(":")[0], players[:5]))
-	teams.append(Team(team_response["draft_opp2"], team_response["score_2"], map1.split(":")[1], map2.split(":")[1],players[5:]))
-	
-	pick_ban.append(PickBan(teams[0].name, "ban", Maps(team_response["draft_mapvoting_bans"][0]).name))
-	pick_ban.append(PickBan(teams[1].name, "ban", Maps(team_response["draft_mapvoting_bans"][1]).name))
-	pick_ban.append(PickBan(teams[1].name, "ban", Maps(team_response["draft_mapvoting_bans"][2]).name))
-	pick_ban.append(PickBan(teams[0].name, "ban", Maps(team_response["draft_mapvoting_bans"][3]).name))
-	pick_ban.append(PickBan(teams[1].name, "pick", Maps(team_response["draft_mapvoting_picks"][0]).name))
-	pick_ban.append(PickBan(teams[0].name, "pick", Maps(team_response["draft_mapvoting_picks"][1]).name))
+	try:
+		if html_match.find_all("div", "content-match-head content-league-match-head")[0].find_all("div", "content-match-head-status")[0].string.strip() == "live":
+			live = True
+		elif html_match.find_all("div", "content-match-head content-league-match-head")[0].find_all("div", "content-match-head-status")[0].string.strip() == "now":
+			live = True
+	except:
+		live = False
+	if not live:
+		scores = html_match.find_all("div", "content-match-head content-league-match-head")[0].find_all("div", "txt-info")[0].string
+		map1 = scores.split("/")[0]
+		map2 = scores.split("/")[1]
 
-	for map in Maps:
-		if not any(x for x in pick_ban if x.map == map.name):
-			pick_ban.append(PickBan("defban", "ban", map.name))
+		teams.append(Team(team_response["draft_opp1"], team_response["score_1"], map1.split(":")[0], map2.split(":")[0], players[:5]))
+		teams.append(Team(team_response["draft_opp2"], team_response["score_2"], map1.split(":")[1], map2.split(":")[1],players[5:]))
+
+		pick_ban.append(PickBan(teams[0].name, "ban", Maps(team_response["draft_mapvoting_bans"][0]).name))
+		pick_ban.append(PickBan(teams[1].name, "ban", Maps(team_response["draft_mapvoting_bans"][1]).name))
+		pick_ban.append(PickBan(teams[1].name, "ban", Maps(team_response["draft_mapvoting_bans"][2]).name))
+		pick_ban.append(PickBan(teams[0].name, "ban", Maps(team_response["draft_mapvoting_bans"][3]).name))
+		pick_ban.append(PickBan(teams[1].name, "pick", Maps(team_response["draft_mapvoting_picks"][0]).name))
+		pick_ban.append(PickBan(teams[0].name, "pick", Maps(team_response["draft_mapvoting_picks"][1]).name))
+
+		for map in Maps:
+			if not any(x for x in pick_ban if x.map == map.name):
+				pick_ban.append(PickBan("defban", "ban", map.name))
 
 def getFaceitInfo(id_steam):
 	result_ff = requests.get(url_ff + str(steamid_to_64bit(id_steam)), headers = header_ff)
@@ -169,7 +182,9 @@ def getFaceitInfo(id_steam):
 			players[player_idx].faceit_kd		= "No faceit account"
 			players[player_idx].faceit_rating	= "No faceit account"
 			players[player_idx].faceit_matches	= "No faceit account"
+			players[player_idx].faceit_link 	= "No faceit account"
 	except:
+		html_ff_profile = html_ff.find_all("div", "stats_profile_wrapper")
 		html_ff_stats = html_ff.find_all("div", style="max-width: 900px;margin: 0 auto;")[0].find_all("div", "stats_totals_block_wrapper")
 		try:
 			elo		= html_ff.find_all("span", "stats_profile_elo_span")[0].string
@@ -187,10 +202,15 @@ def getFaceitInfo(id_steam):
 			matches	= html_ff_stats[5].find_all("span", "stats_totals_block_main_value_span")[0].string
 		except:
 			matches	= "ERROR"
+		try:
+			link = url_faceit + html_ff_profile[0].find_all("span", "stats_profile_name_span")[0].string
+		except:
+			link = "ERROR"
 		players[player_idx].faceit_elo		= elo
 		players[player_idx].faceit_kd		= kd
 		players[player_idx].faceit_rating	= rating
 		players[player_idx].faceit_matches	= matches
+		players[player_idx].faceit_link 	= link
 
 def getBanInfo(id_steam):
 	result_vl = requests.get(url_vl + str(steamid_to_64bit(id_steam)))
@@ -205,26 +225,29 @@ def getBanInfo(id_steam):
 		players[findPlayer(id_steam)].game_ban		= json_vl["game_bans"]
 
 def printCsv():
+	global live
 	f = StringIO()
 	csv_w = csv.writer(f, delimiter = ";", quotechar = '"', quoting = csv.QUOTE_MINIMAL)
 	if args.match:
-		csv_w.writerow([str(teams[0].name), "", str(teams[1].name)])
-		csv_w.writerow([str(teams[0].final_score), "", str(teams[1].final_score)])
-		csv_w.writerow("\n")
-		for item in pick_ban:
-			csv_w.writerow([str(item.team), str(item.action), str(item.map)])
-		csv_w.writerow("\n")
-		csv_w.writerow([str(teams[0].map1_score), str(pick_ban[4].map), str(teams[1].map1_score)])
-		csv_w.writerow([str(teams[0].map2_score), str(pick_ban[5].map), str(teams[1].map2_score)])
-		csv_w.writerow("\n\n")
+		if not live:
+			csv_w.writerow([str(teams[0].name), "", str(teams[1].name)])
+			csv_w.writerow([str(teams[0].final_score), "", str(teams[1].final_score)])
+			csv_w.writerow("\n")
+			for item in pick_ban:
+				csv_w.writerow([str(item.team), str(item.action), str(item.map)])
+			csv_w.writerow("\n")
+			csv_w.writerow([str(teams[0].map1_score), str(pick_ban[4].map), str(teams[1].map1_score)])
+			csv_w.writerow([str(teams[0].map2_score), str(pick_ban[5].map), str(teams[1].map2_score)])
+			csv_w.writerow("\n\n")
 	csv_w.writerow(["99name","steamid","steamname","vacban","gameban","faceitelo","faceitkd","hltvrating","matches"])
 	for idx, player in enumerate(players):
 		if args.match:
-			if idx == 0:
-				csv_w.writerow([str(teams[0].name)])
-			if idx == 5:
-				csv_w.writerow("\n\n")
-				csv_w.writerow([str(teams[1].name)])
+			if not live:
+				if idx == 0:
+					csv_w.writerow([str(teams[0].name)])
+				if idx == 5:
+					csv_w.writerow("\n\n")
+					csv_w.writerow([str(teams[1].name)])
 		csv_w.writerow([str(player.name_99),
 							str(player.id_steam),
 							str(player.name_steam),
@@ -233,27 +256,31 @@ def printCsv():
 							str(player.faceit_elo),
 							str(player.faceit_kd),
 							str(player.faceit_rating),
-							str(player.faceit_matches)])
+							str(player.faceit_matches),
+							str(player.faceit_link)])
 	print(f.getvalue())
 
 def printOut():
+	global live
 	if args.match:
-		print(str(teams[0].name) + " " + str(teams[1].name))
-		print(str(teams[0].final_score) + " " + str(teams[1].final_score))
-		print("\n")
-		for item in pick_ban:
-			print(str(item.team) + " " + str(item.action) + " " + str(item.map))
-		print("\n")
-		print(str(teams[0].map1_score) + " " + str(pick_ban[4].map) + " " + str(teams[1].map1_score))
-		print(str(teams[0].map2_score) + " " + str(pick_ban[5].map) + " " + str(teams[1].map2_score))
-		print("\n\n")
+		if not live:
+			print(str(teams[0].name) + " " + str(teams[1].name))
+			print(str(teams[0].final_score) + " " + str(teams[1].final_score))
+			print("\n")
+			for item in pick_ban:
+				print(str(item.team) + " " + str(item.action) + " " + str(item.map))
+			print("\n")
+			print(str(teams[0].map1_score) + " " + str(pick_ban[4].map) + " " + str(teams[1].map1_score))
+			print(str(teams[0].map2_score) + " " + str(pick_ban[5].map) + " " + str(teams[1].map2_score))
+			print("\n\n")
 	for idx, player in enumerate(players):
-		if args.match:
-			if idx == 0:
-				print(str(teams[0].name))
-			if idx == 5:
-				print("\n\n")
-				print(str(teams[1].name))
+		if not live:
+			if args.match:
+				if idx == 0:
+					print(str(teams[0].name))
+				if idx == 5:
+					print("\n\n")
+					print(str(teams[1].name))
 		print("###########################################")
 		print("99name :\t" + str(player.name_99))
 		print("steamid:\t" + str(player.id_steam))
@@ -264,6 +291,7 @@ def printOut():
 		print("faceitkd:\t" + str(player.faceit_kd))
 		print("hltv rating:\t" + str(player.faceit_rating))
 		print("matches:\t" + str(player.faceit_matches))
+		print("faceitlink:\t" + str(player.faceit_link))
 
 if args.match:
 	url_99 = input("enter 99damage match url: ")
