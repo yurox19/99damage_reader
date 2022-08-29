@@ -15,6 +15,7 @@ this script gets information about 99damage teams/matches
 	* Faceit K/D
 	* HLTV Rating
 	* Faceit Match count
+	* Faceit Link
 * Match information
 	* Match score
 	* Map score
@@ -48,6 +49,8 @@ this script gets information about 99damage teams/matches
 	* Initial Release
 * 0.2
 	* Updated "99damage.de" to "liga.esl-meisterschaft.de"
+* 0.3
+	* Added faceit link and live check
 
 ## License
 
